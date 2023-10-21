@@ -6,7 +6,6 @@ use Illuminate\Support\ServiceProvider;
 use MaroEco\MessageBroker\Contracts\BrokerRepoInterface;
 use MaroEco\MessageBroker\Services\MessageBrokerService;
 use MaroEco\MessageBroker\Repositories\RabbitMQRepository;
-use MaroEco\MessageBroker\Exceptions\InvalidMessageBrokerNameException;
 
 class MessageBrokerServiceProvider extends ServiceProvider
 {
@@ -19,29 +18,23 @@ class MessageBrokerServiceProvider extends ServiceProvider
         );
 
         $this->app->singleton(BrokerRepoInterface::class, function ($app) {
-            switch (env('BROKER_NAME', 'rabbitmq')) {
-                case 'rabbitmq':
-                    return new RabbitMQRepository;
-                /*case 'testmq': // Any new broker will be added here in the future
-                    return new TestMQRepository;*/
-                default:
-                    throw new InvalidMessageBrokerNameException("This Broker Name is Invalid");
-            }
+            return new RabbitMQRepository;
         });
 
-        $this->app->singleton(MessageBrokerService::class, function ($app) {
-            $config = $app->make('config')->get('messagebroker.default');
-            $brokerRepo = $app->make('MaroEco\MessageBroker\Repositories\\'.ucfirst($config).'Repository');
-    
+        $this->app->singleton(MessageBrokerInterface::class, function ($app) {
+            $brokerRepo = $app->make(BrokerRepoInterface::class);
+
             return new MessageBrokerService($brokerRepo);
         });
     }
-    
+
     public function boot()
     {
         // Publish configuration file
         $this->publishes([
             __DIR__ . self::CONFIG_PATH => $this->app->basePath() . self::CONFIG_PATH,
         ], 'config');
+
+
     }
 }

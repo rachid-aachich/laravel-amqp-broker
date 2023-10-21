@@ -7,7 +7,7 @@ return [
     'defaultDevice'                 => "Xilog",
     'default'                       => "rabbitmq",
     'rabbitmq'                      => [
-        'maxRMQDeliveryLimit'           => 31,
+        'maxRMQDeliveryLimit'           => 30,
         'maxRMQConnectionRetries'       => 3,
         'maxRMQConnectionRetryDelay'    => 3000,
         'queue_consumer'                => env('RABBITMQ_QUEUE_CONSUMER', 'ingnotification'),
@@ -18,6 +18,11 @@ return [
         'port'                          => env('RABBITMQ_PORT'),
         'password'                      => env('RABBITMQ_PASSWORD'),
         'vhost'                         => env('RABBITMQ_VHOST')
+    ],
+    'defaultQueues'                 => [
+        env('RABBITMQ_QUEUE_REJECT', 'extractionfailure'),
+        env('RABBITMQ_QUEUE_CONSUMER', 'ingnotification'),
+        env('RABBITMQ_QUEUE_REJECT', 'extractionfailure')
     ]
 
 ];
