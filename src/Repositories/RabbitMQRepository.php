@@ -152,7 +152,18 @@ class RabbitMQRepository implements BrokerRepoInterface
 
     public function rejectMessage($message): void
     {
-        $this->publishMessageToQueue($message, $this->rejectQueue);
+        $headers = $this->getHeadersFromAMQPMessage($message);
+        unset($headers['x-delivery-attempts']);
+
+        $this->publishMessageToQueue(
+            new AMQPMessage(
+                $message->getBody(), [
+                    'application_headers' => $this->createAMQPTableFromArray($headers)
+                ]
+            ),
+            $this->rejectQueue
+        );
+
         $this->acknowledgeMessage($message);
     }
 
