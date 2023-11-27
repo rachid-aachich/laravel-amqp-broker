@@ -18,7 +18,4 @@ interface BrokerRepoInterface
     public function acknowledgeMessage(AMQPMessage $message);
     public function requeueNewMessage($message, $queue = false);
     public function consumeFromConsumerQueue(callable $callback);
-    public function declareQueue(string $queueName,$checkQueueExists = false, $durable = true, $exclusive = false, $autoDelete = false );
-    public function declareExchange($exchangeName, $exchangeType = 'fanout', $checkQueueExists = false, $durable = true, $autoDelete = false);
-    public function bindQueuesWithExchange($exchangeName, $queueName , $routingKey = '', $nowait = false, $arguments = []);
 }
