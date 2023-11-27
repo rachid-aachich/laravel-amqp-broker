@@ -270,11 +270,6 @@ class RabbitMQRepository implements BrokerRepoInterface
 
             $queue ??= $this->publishQueue;
 
-            if ($queue && $queue != $this->publishQueue)
-            {
-                $this->declareQueue($queue);
-            }
-
             $msgIsAMQPMessage = $this->isAMQPMessage($msg);
 
             $message = $msgIsAMQPMessage ? $msg->getBody() : json_encode($msg);
@@ -328,19 +323,9 @@ class RabbitMQRepository implements BrokerRepoInterface
                     'Failed to establish connection to RabbitMQ server.'
                 );
             }
-            $exchange ??= env("RABBITMQ_REPUBLISH_EXCHANGE");
-
-            if ($queue && $queue != $this->publishQueue)
-            {
-                $this->declareQueue($queue);
-            } else {
-                $queue = $this->publishQueue;
-            }
+            $exchange ??= env("RABBITMQ_EXCHANGE_PUBLISHER");
 
             self::$channel->confirm_select();
-
-            $this->declareExchange($exchange, 'direct');
-            $this->bindQueuesWithExchange($queue, $exchange);
 
             $messages->map(function ($msg) use($headers, $exchange){
                 $newMessage = new AMQPMessage($msg, [
@@ -387,9 +372,6 @@ class RabbitMQRepository implements BrokerRepoInterface
                 );
             }
 
-            $this->declareExchange($exchangeName,$exchangeType,true);
-
-
             $msgIsAMQPMessage = $this->isAMQPMessage($msg);
 
             $message = $msgIsAMQPMessage ? $msg->getBody() : json_encode($msg);
@@ -435,74 +417,9 @@ class RabbitMQRepository implements BrokerRepoInterface
      */
     public function setupQueuesAndExchanges(array $queuesName = [], array $exchangesName = [], array $bindExchangeQueues = [])
     {
-        $queuesName = empty($queuesName) ? config("messagebroker.defaultQueues") : $queuesName;
-        foreach ($queuesName as $queueName)
-        {
-            $this->declareQueue($queueName);
-        }
-
-        foreach ($exchangesName as $exchange)
-        {
-            $this->declareExchange($exchange);
-        }
-
-        foreach ($bindExchangeQueues as $exchange => $queues)
-        {
-            foreach ($queues as $queue)
-            {
-                $this->bindQueuesWithExchange($exchange , $queue);
-            }
-        }
+        
     }
 
-
-    /**
-     * Declares a queue with optional parameters.
-     *
-     * @param  mixed $queueName
-     * @param  mixed $checkQueueExists if is true, the server will not create the queue if it does not already exist.
-     * @param  mixed $durable if is true, the queue will survive server restarts.
-     * @param  mixed $exclusive if is true, the queue can only be accessed by the current connection and will be deleted when the connection is closed.
-     * @param  mixed $autoDelete if is true, the queue will be deleted when there are no consumers left.
-     * @return void
-     */
-    public function declareQueue(string $queueName,$checkQueueExists = false, $durable = true, $exclusive = false, $autoDelete = false )
-    {
-        self::$channel->queue_declare(
-            $queueName, $checkQueueExists, $durable, $exclusive, $autoDelete
-        );
-    }
-
-    /**
-     * declare an Exchange
-     *
-     * @param  mixed $exchangeName The name of the exchange to declare.
-     * @param  mixed $exchangeType The type of the exchange ('direct', 'topic', 'fanout','headers, etc.).
-     * @param  mixed $checkQueueExists if is true, the server will not create the Exchange if it does not already exist.
-     * @param  mixed $durable if is true, the Exchange will survive server restarts.
-     * @param  mixed $autoDelete if is true, the Exchange will be deleted when there are no consumers left.
-     *
-     * @return void
-     */
-    public function declareExchange($exchangeName, $exchangeType = 'fanout', $checkQueueExists = false, $durable = true, $autoDelete = false)
-    {
-        self::$channel->exchange_declare($exchangeName, $exchangeType, $checkQueueExists, $durable, $autoDelete);
-    }
-
-    /**
-     * Bind a queue to an exchange with a routing key
-     *
-     * @param  mixed $exchangeName The name of the exchange.
-     * @param  mixed $queueName The name of the queue.
-     * @param  mixed $routingKey The routing key to use for the binding , the default is without key.
-     * @param  mixed $nowait If set to true, the server will not respond to the method.
-     * @param  mixed $arguments Additional binding arguments.
-     * @return void
-     */
-    public function bindQueuesWithExchange($exchangeName, $queueName , $routingKey = '', $nowait = false, $arguments = [])
-    {
-        self::$channel->queue_bind($queueName, $exchangeName, $routingKey, $nowait, $arguments);
-    }
 
     /**
      * Returns the status of the RabbitMQ server.
