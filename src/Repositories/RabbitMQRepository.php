@@ -9,7 +9,6 @@ use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Exception\AMQPConnectionClosedException;
 use PhpAmqpLib\Exception\AMQPRuntimeException;
 use PhpAmqpLib\Message\AMQPMessage;
-use PhpAmqpLib\Wire\AMQPTable;
 
 use function config;
 
@@ -18,23 +17,17 @@ class RabbitMQRepository implements BrokerRepoInterface
     private static $channel;
     private static $connection;
 
-    protected $consumeQueue;
-    protected $rejectQueue;
     protected $maxRetries;
     protected $retryDelay;
     protected $maxDeliveryLimit;
-    protected $publishQueue;
 
     protected const LOG_CHANNELS = ['rabbitmq', 'single', 'stderr'];
 
     public function __construct()
     {
-        $this->consumeQueue  = config('messagebroker.rabbitmq.queue_consumer');
-        $this->rejectQueue  = config('messagebroker.rabbitmq.reject_queue');
         $this->maxRetries   = config('messagebroker.rabbitmq.maxRMQConnectionRetries');
         $this->retryDelay   = config('messagebroker.rabbitmq.maxRMQConnectionRetryDelay'); // Delay in milliseconds
         $this->maxDeliveryLimit = config('messagebroker.rabbitmq.maxRMQDeliveryLimit');
-        $this->publishQueue = config('messagebroker.rabbitmq.publish_queue');
     }
 
     /**
@@ -42,11 +35,11 @@ class RabbitMQRepository implements BrokerRepoInterface
      *
      * @return void
      */
-    public function connect(array $queuesName = [], array $exchangesName = [], array $bindExchangeQueues = [])
+    public function connect()
     {
         Log::stack(self::LOG_CHANNELS)->info('start connect!');
         try {
-            retry($this->maxRetries, function () use($queuesName, $exchangesName, $bindExchangeQueues) {
+            retry($this->maxRetries, function () {
                 self::$connection = new AMQPStreamConnection(
                     config('messagebroker.rabbitmq.hostname'),
                     config('messagebroker.rabbitmq.port'),
@@ -55,7 +48,6 @@ class RabbitMQRepository implements BrokerRepoInterface
                     config('messagebroker.rabbitmq.vhost')
                 );
                 self::$channel = self::$connection->channel();
-                $this->setupQueuesAndExchanges($queuesName, $exchangesName, $bindExchangeQueues);
 
                 Log::stack(self::LOG_CHANNELS)->info("Succeeded in establishing connection with RabbitMQ server.");
             }, $this->retryDelay);
@@ -73,146 +65,15 @@ class RabbitMQRepository implements BrokerRepoInterface
         }
     }
 
-
-    /**
-     * Increments the delivery attempts for a given message.
-     *
-     * @param AMQPMessage $message
-     * @return array
-     */
-    private function incrementDeliveryAttempts($message)
-    {
-        $headers = $this->getHeadersFromAMQPMessage($message);
-        $headers['x-delivery-attempts'] = (int) (
-            $headers['x-delivery-attempts'] ?? 0
-            ) + 1;
-        return $headers;
-    }
-
-    /**
-     * Generates a new message with incremented headers.
-     *
-     * @param AMQPMessage $message
-     * @return AMQPMessage
-     */
-    private function getNewMessageIncrementHeaders($message)
-    {
-        $headers = $this->incrementDeliveryAttempts($message);
-        // Create a new AMQPMessage with the updated headers
-        return new AMQPMessage($message->getBody(), [
-            'application_headers' => $this->createAMQPTableFromArray($headers)
-        ]);
-    }
-
-    /**
-     * Converts an array of headers into an AMQPTable.
-     *
-     * @param array|null $headers
-     * @return AMQPTable
-     */
-    private function createAMQPTableFromArray($headers = null)
-    {
-        return new AMQPTable(is_array($headers) ? $headers : []);
-    }
-
-    /**
-     * Get headers from an AMQP message.
-     *
-     * @param \PhpAmqpLib\Message\AMQPMessage $message The AMQP message containing headers.
-     *
-     * @return array An associative array containing the application headers.
-     */
-    private function getHeadersFromAMQPMessage(AMQPMessage $message) : array
-    {
-        return $message->get('application_headers')->getNativeData();
-    }
-
-    public function acknowledgeMessage(AMQPMessage $message)
-    {
-        self::$channel->basic_ack($message->delivery_info['delivery_tag']);
-    }
-
-    /**
-     * Checks if the delivery limit has been exceeded for a given message.
-     *
-     * @param AMQPMessage $message
-     * @return bool
-     */
-    private function hasExceededDeliveryLimit(AMQPMessage $message)
-    {
-        $deliveryAttempts = $this->getHeadersFromAMQPMessage($message)['x-delivery-attempts'] ?? 0;
-
-        return $deliveryAttempts > $this->maxDeliveryLimit;
-    }
-
-    public function isMessageRejectable($message): bool
-    {
-        return empty($message) || !$message || $this->hasExceededDeliveryLimit($message);
-    }
-
-    public function rejectMessage($message): void
-    {
-        $headers = $this->getHeadersFromAMQPMessage($message);
-        if (array_key_exists('x-delivery-attempts', $headers)) {
-            unset($headers['x-delivery-attempts']);
-        }
-
-        $this->publishMessageToQueue(
-            new AMQPMessage(
-                $message->getBody(), [
-                    'application_headers' => $this->createAMQPTableFromArray($headers)
-                ]
-            ),
-            $this->rejectQueue
-        );
-
-        $this->acknowledgeMessage($message);
-    }
-
-    /**
-     * Check if a variable is an instance of an AMQPMessage.
-     *
-     * @param mixed $message The variable to check.
-     *
-     * @return bool True if the variable is an instance of AMQPMessage, false otherwise.
-     */
-    public function isAMQPMessage($message): bool
-    {
-        return $message instanceof AMQPMessage;
-    }
-
-    /**
-     * Requeues a new message and removes the old one.
-     *
-     * @param AMQPMessage $msg
-     * @param string $queue
-     * @return void
-     */
-    public function requeueNewMessage($message, $queue = null)
-    {
-        $newMessage = $this->getNewMessageIncrementHeaders($message);
-        $queue ??= $this->consumeQueue;
-
-        // Publish the new message to the queue with the updated headers
-        self::$channel->basic_publish($newMessage, '', $queue);
-
-        // Aknowledge the message re-delivery and thereafter removing its old instance from the queue
-        $this->acknowledgeMessage($message);
-    }
-
-    public function consumeFromConsumerQueue(callable $callback): void
-    {
-        $this->consumeMessageFromQueue($this->consumeQueue, $callback);
-    }
-
     /**
      * Consumes a message from a given queue.
      *
-     * @param string|null $queue
+     * @param string $consumeQueue
      * @param callable $callback
      * @return void
+     * @throws AMQPConnectionClosedException
      */
-    public function consumeMessageFromQueue($queue, callable $callback): void
+    public function consumeMessageFromQueue(string $consumeQueue, callable $callback): void
     {
         try {
             Log::stack(self::LOG_CHANNELS)->info('consumption started!');
@@ -225,7 +86,7 @@ class RabbitMQRepository implements BrokerRepoInterface
                 self::$channel = self::$connection->channel();
             }
 
-            self::$channel->basic_consume($queue, '', false, false, false, false, $callback);
+            self::$channel->basic_consume($consumeQueue, '', false, false, false, false, $callback);
 
             while (count(self::$channel->callbacks)) {
                 self::$channel->wait();
@@ -250,16 +111,15 @@ class RabbitMQRepository implements BrokerRepoInterface
         }
     }
 
-
     /**
      * Publishes a message to a given queue.
      *
-     * @param mixed $msg
-     * @param string|null $queue
-     * @param array|null $headers
+     * @param AMQPMessage $message
+     * @param string $publishQueue
      * @return void
+     * @throws AMQPConnectionClosedException
      */
-    public function publishMessageToQueue($msg, string|null $queue = null, array|null $headers = null)
+    public function publishMessageToQueue(AMQPMessage $message, string $publishQueue)
     {
         try {
             if (!self::$connection || !self::$connection->isConnected()) {
@@ -268,18 +128,8 @@ class RabbitMQRepository implements BrokerRepoInterface
                 );
             }
 
-            $queue ??= $this->publishQueue;
+            self::$channel->basic_publish($message, '', $publishQueue);
 
-            $msgIsAMQPMessage = $this->isAMQPMessage($msg);
-
-            $message = $msgIsAMQPMessage ? $msg->getBody() : json_encode($msg);
-            $headers ??= $msgIsAMQPMessage ? $this->getHeadersFromAMQPMessage($msg) : [];
-
-            $newMessage = new AMQPMessage($message, [
-                'application_headers' => $this->createAMQPTableFromArray($headers)
-            ]);
-
-            self::$channel->basic_publish($newMessage, '', $queue);
         } catch (AMQPConnectionClosedException $e) {
             Log::stack(self::LOG_CHANNELS)->error(
                 "connect To RMQStream Connection Closed "
@@ -300,22 +150,20 @@ class RabbitMQRepository implements BrokerRepoInterface
                 . "\n Stacktrace: "
                 . $e->getTraceAsString()
                 . "\n- Payload: ",
-                [$msg->body]
+                [$message->body]
             );
         }
     }
 
-
     /**
-     * Publishes a Bulk of messages (Laravel Collection Of data) to a given queue.
+     * Publishes a Bulk of messages to a given queue.
      *
      * @param Collection $messages
-     * @param string|null $exchange the name of the exchange to bind with the queue
-     * @param string|null $queue
-     * @param array|null $headers
+     * @param string $queue
      * @return void
+     * @throws AMQPConnectionClosedException
      */
-    public function publishBulkMessagesToQueue(Collection $messages, $headers = null, $exchange = null ,$queue = null)
+    public function publishBulkMessagesToQueue(Collection $messages, string $queue)
     {
         try {
             if (!self::$connection || !self::$connection->isConnected()) {
@@ -323,15 +171,11 @@ class RabbitMQRepository implements BrokerRepoInterface
                     'Failed to establish connection to RabbitMQ server.'
                 );
             }
-            $exchange ??= env("RABBITMQ_EXCHANGE_PUBLISHER");
 
             self::$channel->confirm_select();
 
-            $messages->map(function ($msg) use($headers, $exchange){
-                $newMessage = new AMQPMessage($msg, [
-                    'application_headers' => $this->createAMQPTableFromArray($headers)
-                ]);
-                self::$channel->batch_basic_publish($newMessage, $exchange,'');
+            $messages->map(function (AMQPMessage $msg) use($queue){
+                self::$channel->batch_basic_publish($msg, '', $queue);
             });
 
             self::$channel->publish_batch();
@@ -362,8 +206,15 @@ class RabbitMQRepository implements BrokerRepoInterface
         }
     }
 
-
-    public function publishMessageToExchange($msg, string|null $exchangeName = null, $exchangeType = 'fanout', array|null $headers = null)
+    /**
+     * Publishes a Bulk of messages to a given exchange.
+     *
+     * @param Collection $messages
+     * @param string $exchange
+     * @return void
+     * @throws AMQPConnectionClosedException
+     */
+    public function publishBulkMessagesToExchange(Collection $messages, string $exchange)
     {
         try {
             if (!self::$connection || !self::$connection->isConnected()) {
@@ -372,16 +223,59 @@ class RabbitMQRepository implements BrokerRepoInterface
                 );
             }
 
-            $msgIsAMQPMessage = $this->isAMQPMessage($msg);
+            self::$channel->confirm_select();
 
-            $message = $msgIsAMQPMessage ? $msg->getBody() : json_encode($msg);
-            $headers ??= $msgIsAMQPMessage ? $this->getHeadersFromAMQPMessage($msg) : [];
+            $messages->map(function (AMQPMessage $msg) use($exchange){
+                self::$channel->batch_basic_publish($msg, $exchange,'');
+            });
 
-            $newMessage = new AMQPMessage($message, [
-                'application_headers' => $this->createAMQPTableFromArray($headers)
-            ]);
+            self::$channel->publish_batch();
+            self::$channel->wait_for_pending_acks_returns();
 
-            self::$channel->basic_publish($newMessage, $exchangeName);
+        } catch (AMQPConnectionClosedException $e) {
+            Log::stack(self::LOG_CHANNELS)->error(
+                "connect To RMQStream Connection Closed "
+                . "from publishToQueue function."
+                . "\n Exception: "
+                . $e->getMessage()
+                . "\n Stacktrace: "
+                . $e->getTraceAsString()
+            );
+            // send email to the Admin Manager
+            //
+        } catch (\Exception $e) {
+            Log::stack(self::LOG_CHANNELS)->warning(
+                "The Publish is not completed \n"
+                . "from publishToQueue function: \n"
+                . "\n Exception: "
+                . $e->getMessage()
+                . "\n Stacktrace: "
+                . $e->getTraceAsString()
+                . "\n- Payload: ",
+                [$messages]
+            );
+        }
+    }
+
+    /**
+     * Publishes a message to a given exchange.
+     *
+     * @param AMQPMessage $message
+     * @param string $exchange
+     * @return void
+     * @throws AMQPConnectionClosedException
+     */
+    public function publishMessageToExchange(AMQPMessage $message, string $exchange)
+    {
+        try {
+            if (!self::$connection || !self::$connection->isConnected()) {
+                throw new AMQPConnectionClosedException(
+                    'Failed to establish connection to RabbitMQ server.'
+                );
+            }
+
+            self::$channel->basic_publish($message, $exchange);
+
         } catch (AMQPConnectionClosedException $e) {
             Log::stack(self::LOG_CHANNELS)->error(
                 "connect To RMQStream Connection Closed "
@@ -402,24 +296,21 @@ class RabbitMQRepository implements BrokerRepoInterface
                 . "\n Stacktrace: "
                 . $e->getTraceAsString()
                 . "\n- Payload: ",
-                [$msg->body]
+                [$message->body]
             );
         }
     }
 
     /**
-     * Set up RabbitMQ queues, exchanges, and bindings based on provided configuration.
+     * Acknowledges a message.
      *
-     * @param  array $queuesName An array of queue names to declare
-     * @param  array $exchangesName An array of exchange names to declare
-     * @param  array $bindExchangeQueues An associative array where keys are exchange names, and values are arrays of queue names.
+     * @param AMQPMessage $message
      * @return void
      */
-    public function setupQueuesAndExchanges(array $queuesName = [], array $exchangesName = [], array $bindExchangeQueues = [])
+    public function acknowledgeMessage(AMQPMessage $message)
     {
-        
+        self::$channel->basic_ack($message->delivery_info['delivery_tag']);
     }
-
 
     /**
      * Returns the status of the RabbitMQ server.
@@ -433,6 +324,17 @@ class RabbitMQRepository implements BrokerRepoInterface
             "connect"       => $this->isConnected(),
             "consuming"     => $this->isConsuming()
         ];
+    }
+
+    /**
+     * Closes the connection to the RabbitMQ server.
+     *
+     * @return void
+     */
+    public function closeConnection()
+    {
+        isset(self::$connection) ? self::$connection->close() : self::$connection = null;
+        isset(self::$channel) ? self::$channel->close() : self::$channel = null;
     }
 
     /**
@@ -461,17 +363,6 @@ class RabbitMQRepository implements BrokerRepoInterface
         } catch (\Throwable $th) {
             return false;
         }
-    }
-
-    /**
-     * Closes the connection to the RabbitMQ server.
-     *
-     * @return void
-     */
-    public function closeConnection()
-    {
-        isset(self::$connection) ? self::$connection->close() : self::$connection = null;
-        isset(self::$channel) ? self::$channel->close() : self::$channel = null;
     }
 
 }

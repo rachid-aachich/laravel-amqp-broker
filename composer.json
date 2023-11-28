@@ -17,11 +17,16 @@
             "MaroEco\\MessageBroker\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "MaroEco\\MessageBroker\\Tests\\": "tests/"
+        }
+    },
     "extra": {
         "laravel": {
             "providers": [
                 "MaroEco\\MessageBroker\\MessageBrokerServiceProvider"
             ]
         }
-    }    
+    }
 }

@@ -3,13 +3,68 @@
 namespace MaroEco\MessageBroker\Contracts;
 
 use Illuminate\Support\Collection;
+use PhpAmqpLib\Message\AMQPMessage;
 
 interface MessageBrokerInterface
 {
-    public function connect(array $queuesName = [], array $exchangesName = [], array $bindExchangeQueues = []);
-    public function consumeMessage(callable $callback);
-    public function publishToQueue($msg, $headers = null, $queue = null);
-    public function publishBulkToQueue(Collection $messages, $headers = null, $exchange = null ,$queue = null);
-    public function publishToExchange($msg, $headers = null, $exchangeName = null, $exchangeType = 'fanout');
+
+    public function connect();
+
+    /**
+     * Consume message.
+     *
+     * @param callable The callback function to handle the consumed message
+     * @return void
+     */
+    public function consumeMessage(string $consumeQueue, string $rejectQueue, callable $callback);
+
+    /**
+     * Publish a message to a specific queue.
+     *
+     * @param mixed $msg The message to publish.
+     * @param string|null $queue The name of the queue.
+     * @param array|null $headers Additional headers for the message.
+     * @return void
+     */
+    public function publishToQueue($messageContent, string $queue , array $headers = []);
+
+    /**
+     * Publish Bulk messages to a specific queue.
+     *
+     * @param Collection $messages The messages collection to publish.
+     * @param array|null $headers Additional headers for the message.
+     * @param string|null $exchange The name of the exchange.
+     * @param string|null $queue The name of the queue.
+     * @return void
+     */
+    public function publishBulkMessagesToQueue(Collection $messages, string $queue, array $headers = []);
+
+    /**
+     * Publish Bulk messages to a specific queue.
+     *
+     * @param Collection $messages The messages collection to publish.
+     * @param array|null $headers Additional headers for the message.
+     * @param string|null $exchange The name of the exchange.
+     * @param string|null $queue The name of the queue.
+     * @return void
+     */
+    public function publishBulkMessagesToExchange(Collection $messages, string $exchange, array $headers = []);
+
+    /**
+     * Publish Bulk messages to a specific exchange.
+     *
+     * @param Collection $messages The messages collection to publish.
+     * @param array|null $headers Additional headers for the message.
+     * @param string|null $exchange The name of the exchange.
+     * @param string|null $queue The name of the queue.
+     * @return void
+     */
+    public function publishToExchange($msg, string $exchangeName , array $headers = []);
+
+    /**
+     * Get the status of the message broker.
+     *
+     * @return array The status of the message broker.
+     */
     public function getStatus();
 }

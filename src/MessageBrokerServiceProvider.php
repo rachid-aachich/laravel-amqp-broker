@@ -3,9 +3,13 @@
 namespace MaroEco\MessageBroker;
 
 use Illuminate\Support\ServiceProvider;
+use MaroEco\MessageBroker\Contracts\AMQPHelperServiceInterface;
+use MaroEco\MessageBroker\Contracts\AMQPMessageServiceInterface;
 use MaroEco\MessageBroker\Contracts\BrokerRepoInterface;
 use MaroEco\MessageBroker\Services\MessageBrokerService;
 use MaroEco\MessageBroker\Repositories\RabbitMQRepository;
+use MaroEco\MessageBroker\Services\AMQPHelperService;
+use MaroEco\MessageBroker\Services\AMQPMessageService;
 
 class MessageBrokerServiceProvider extends ServiceProvider
 {
@@ -21,11 +25,9 @@ class MessageBrokerServiceProvider extends ServiceProvider
             return new RabbitMQRepository;
         });
 
-        $this->app->singleton(MessageBrokerInterface::class, function ($app) {
-            $brokerRepo = $app->make(BrokerRepoInterface::class);
-
-            return new MessageBrokerService($brokerRepo);
-        });
+        $this->app->singleton(MessageBrokerInterface::class, MessageBrokerService::class);
+        $this->app->singleton(AMQPMessageServiceInterface::class, AMQPMessageService::class);
+        $this->app->singleton(AMQPHelperServiceInterface::class, AMQPHelperService::class);
     }
 
     public function boot()

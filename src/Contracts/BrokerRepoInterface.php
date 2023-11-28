@@ -7,15 +7,12 @@ use PhpAmqpLib\Message\AMQPMessage;
 
 interface BrokerRepoInterface
 {
-    public function connect(array $queuesName = [], array $exchangesName = [], array $bindExchangeQueues = []);
-    public function consumeMessageFromQueue($queue, callable $callback);
-    public function publishMessageToQueue($msg, string|null $queue = null, array|null $headers = null);
-    public function publishMessageToExchange($msg, string|null $exchangeName = null, $exchangeType = 'fanout', array|null $headers = null);
-    public function publishBulkMessagesToQueue(Collection $messages, $headers = null, $exchange = null ,$queue = null);
+    public function connect();
+    public function consumeMessageFromQueue(string $consumeQueue, callable $callback): void;
+    public function publishMessageToQueue(AMQPMessage $message, string $publishQueue);
+    public function publishMessageToExchange(AMQPMessage $message, string $exchange);
+    public function publishBulkMessagesToQueue(Collection $messages, string $queue);
+    public function publishBulkMessagesToExchange(Collection $messages, string $exchange);
     public function status();
-    public function isMessageRejectable($message): bool;
-    public function rejectMessage($message): void;
     public function acknowledgeMessage(AMQPMessage $message);
-    public function requeueNewMessage($message, $queue = false);
-    public function consumeFromConsumerQueue(callable $callback);
 }
