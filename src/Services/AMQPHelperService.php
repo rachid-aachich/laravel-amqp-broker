@@ -106,7 +106,7 @@ class AMQPHelperService implements AMQPHelperServiceInterface
     {
         $msgIsAMQPMessage = $this->isAMQPMessage($content);
 
-        $message = $msgIsAMQPMessage ? $content->getBody() : json_encode($content);
+        $message = $msgIsAMQPMessage ? $content->getBody() : $content;
         $headers = $msgIsAMQPMessage && count($headers) == 0 ? $this->getHeadersFromAMQPMessage($content) : $headers;
 
         $amqpMessage = new AMQPMessage($message, [
