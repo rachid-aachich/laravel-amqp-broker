@@ -275,7 +275,7 @@ class RabbitMQRepository implements BrokerRepoInterface
                 );
             }
 
-            self::$channel->basic_publish($message, $exchange);
+            self::$channel->basic_publish($message, $exchange, $routingKey);
 
         } catch (AMQPConnectionClosedException $e) {
             Log::stack(self::LOG_CHANNELS)->error(
