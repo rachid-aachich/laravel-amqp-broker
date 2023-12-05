@@ -262,10 +262,11 @@ class RabbitMQRepository implements BrokerRepoInterface
      *
      * @param AMQPMessage $message
      * @param string $exchange
+     * @param string $routingKey
      * @return void
      * @throws AMQPConnectionClosedException
      */
-    public function publishMessageToExchange(AMQPMessage $message, string $exchange)
+    public function publishMessageToExchange(AMQPMessage $message, string $exchange, string $routingKey = '')
     {
         try {
             if (!self::$connection || !self::$connection->isConnected()) {
