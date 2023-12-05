@@ -133,20 +133,19 @@ class AMQPMessageService implements AMQPMessageServiceInterface
         $this->messageBrokerRepository->publishBulkMessagesToExchange($messages, $exchange);
     }
 
-
     /**
      * Publish a message to the specified exchange.
      *
      * @param mixed $message
      * @param string $exchangeName
      * @param array $headers
+     * @param string $routingKey
      */
-    public function publishMessageToExchange($message, string $exchangeName, array $headers = [])
+    public function publishMessageToExchange($message, string $exchangeName, array $headers = [], string $routingKey = "")
     {
-        $amqpMessage = $this->amqpHelperService->createPersistenceAMQPMessage($message, $headers);
-        $this->messageBrokerRepository->publishMessageToExchange($amqpMessage, $exchangeName);
+        $amqpMessage = $this->amqpHelperService->createPersistenceAMQPMessage($message, $headers, $routingKey);
+        $this->messageBrokerRepository->publishMessageToExchange($amqpMessage, $exchangeName, $routingKey);
     }
-
 
     /**
      * Get the status of the message broker Connection.
