@@ -51,16 +51,16 @@ interface MessageBrokerInterface
     public function publishBulkMessagesToExchange(Collection $messages, string $exchange, array $headers = []);
 
     /**
-     * Publish Bulk messages to a specific exchange.
+     * Publish a message to a specific exchange.
      *
-     * @param Collection $messages The messages collection to publish.
-     * @param array|null $headers Additional headers for the message.
-     * @param string|null $exchange The name of the exchange.
-     * @param string|null $queue The name of the queue.
+     * @param mixed $messageContent The message to publish.
+     * @param string $exchangeName The name of the exchange.
+     * @param array $headers Additional headers for the message.
+     * @param string $routingKey The Routing key for the exchange.
      * @return void
      */
-    public function publishToExchange($msg, string $exchangeName , array $headers = []);
-
+    public function publishToExchange($messageContent, string $exchangeName, array $headers = [], string $routingKey = "");
+    
     /**
      * Get the status of the message broker.
      *
