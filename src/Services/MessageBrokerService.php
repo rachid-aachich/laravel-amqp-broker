@@ -83,13 +83,14 @@ class MessageBrokerService implements MessageBrokerInterface
      * @param mixed $messageContent
      * @param string $exchangeName
      * @param array $headers
+     * @param string $routingKey
      */
-    public function publishToExchange($messageContent, string $exchangeName , array $headers = [])
+    public function publishToExchange($messageContent, string $exchangeName , array $headers = [], string $routingKey = "")
     {
         $pool = Pool::create();
 
-        $pool->add(function () use ($messageContent, $exchangeName, $headers) {
-            $this->amqpMessageService->publishMessageToExchange($messageContent, $exchangeName, $headers);
+        $pool->add(function () use ($messageContent, $exchangeName, $headers, $routingKey) {
+            $this->amqpMessageService->publishMessageToExchange($messageContent, $exchangeName, $headers, $routingKey);
         });
 
         $pool->wait();
