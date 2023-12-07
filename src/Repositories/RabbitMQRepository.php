@@ -21,7 +21,6 @@ class RabbitMQRepository implements BrokerRepoInterface
     protected $maxRetries;
     protected $retryDelay;
     protected $maxDeliveryLimit;
-    protected $attempts;
 
     protected const LOG_CHANNELS = ['rabbitmq', 'single', 'stderr'];
 
@@ -30,7 +29,6 @@ class RabbitMQRepository implements BrokerRepoInterface
         $this->maxRetries   = config('messagebroker.rabbitmq.maxRMQConnectionRetries');
         $this->retryDelay   = config('messagebroker.rabbitmq.maxRMQConnectionRetryDelay'); // Delay in milliseconds
         $this->maxDeliveryLimit = config('messagebroker.rabbitmq.maxRMQDeliveryLimit');
-        $this->attempts     = 0;
     }
 
     /**
@@ -111,12 +109,8 @@ class RabbitMQRepository implements BrokerRepoInterface
                     . "\n Stacktrace: "
                     . $e->getTraceAsString()
                 );
-            $this->attempts++;
-            if ($this->attempts < 4) {
-                $this->consumeMessageFromQueue($consumeQueue, $callback);
-            } else {
-                throw $e;
-            }
+                self::$channel->basic_nack(0, 1); // Reject one or more incoming messages effectively sending them to dlx
+                $this->consumeMessageFromQueue($consumeQueue, $callback); // rerun the consume-process
         } catch (\Exception $e) {
             Log::stack(self::LOG_CHANNELS)
                 ->error(
