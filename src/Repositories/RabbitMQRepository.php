@@ -7,6 +7,7 @@ use MaroEco\MessageBroker\Contracts\BrokerRepoInterface;
 use Illuminate\Support\Facades\Log;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Exception\AMQPConnectionClosedException;
+use PhpAmqpLib\Exception\AMQPInvalidArgumentException;
 use PhpAmqpLib\Exception\AMQPRuntimeException;
 use PhpAmqpLib\Message\AMQPMessage;
 
@@ -98,9 +99,8 @@ class RabbitMQRepository implements BrokerRepoInterface
                     "connect To RMQStream Connection Closed from consumeMessageFromQueue function : "
                     . $e->getMessage()
                 );
-                throw $e;
             // To enhanced later: report error
-        } catch (\Exception $e) {
+        } catch (AMQPInvalidArgumentException $e) {
             Log::stack(self::LOG_CHANNELS)
                 ->error(
                     "Cannot consume from the queue: " . $consumeQueue . ". Will exit the process."
@@ -109,7 +109,15 @@ class RabbitMQRepository implements BrokerRepoInterface
                     . "\n Stacktrace: "
                     . $e->getTraceAsString()
                 );
-            throw $e;
+        } catch (\Exception $e) {
+            Log::stack(self::LOG_CHANNELS)
+                ->error(
+                    "Unrecoverable error occurred"
+                    . "\n Exception: "
+                    . $e->getMessage()
+                    . "\n Stacktrace: "
+                    . $e->getTraceAsString()
+                );
         }
     }
 
