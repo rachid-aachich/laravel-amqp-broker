@@ -29,10 +29,11 @@ class AMQPMessageService implements AMQPMessageServiceInterface
      * Validate a message and determine if it should be rejected.
      *
      * @param AMQPMessage $message
-     * @param string $rejectQueue
+     * @param string $failureExchange
+     * @param array $headers
      * @return bool True if the message is valid, false if it should be rejected.
      */
-    public function validateMessage(AMQPMessage $message, string $rejectQueue): bool
+    public function validateMessage(AMQPMessage $message, string $failureExchange, array $headers = []): bool
     {
         if (!$this->amqpHelperService->isMessageRejectable($message)) return true; // this message is valid
 
@@ -44,7 +45,7 @@ class AMQPMessageService implements AMQPMessageServiceInterface
 
         $amqpMessage = $this->amqpHelperService->createPersistenceAMQPMessage($message->getBody(), $headers);
 
-        $this->publishMessageToQueue($amqpMessage, $rejectQueue);
+        $this->publishMessageToExchange($amqpMessage, $failureExchange, $headers);
 
         $this->takeMessage($message);
 

@@ -16,7 +16,7 @@ interface MessageBrokerInterface
      * @param callable The callback function to handle the consumed message
      * @return void
      */
-    public function consumeMessage(string $consumeQueue, string $rejectQueue, callable $callback);
+    public function consumeMessage(string $consumeQueue, string $rejectExchange, callable $callback);
 
     /**
      * Publish a message to a specific queue.

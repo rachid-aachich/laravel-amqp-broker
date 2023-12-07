@@ -3,6 +3,7 @@
 namespace MaroEco\MessageBroker\Services;
 
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use MaroEco\MessageBroker\Contracts\MessageBrokerInterface;
 use Spatie\Async\Pool;
 use MaroEco\MessageBroker\Contracts\AMQPMessageServiceInterface;
@@ -16,6 +17,8 @@ use MaroEco\MessageBroker\Contracts\AMQPMessageServiceInterface;
  */
 class MessageBrokerService implements MessageBrokerInterface
 {
+    protected const LOG_CHANNELS = ['rabbitmq', 'single', 'stderr'];
+
     /**
      * Create a new MessageBrokerService instance.
      *
@@ -34,21 +37,33 @@ class MessageBrokerService implements MessageBrokerInterface
      * Consume a message from the specified queue and handle it using the provided callback.
      *
      * @param string $consumeQueue
-     * @param string $rejectQueue
+     * @param string $rejectExchange
      * @param callable $callback
      */
-    public function consumeMessage($consumeQueue, $rejectQueue, callable $callback)
+    public function consumeMessage($consumeQueue, $rejectExchange, callable $callback)
     {
-        $handler = function($message) use($callback, $rejectQueue, $consumeQueue) {
-            if( !$this->amqpMessageService->validateMessage($message, $rejectQueue) ) return;
+        $handler = function($message) use($callback, $rejectExchange, $consumeQueue) {
+            if( !$this->amqpMessageService->validateMessage($message, $rejectExchange) ) return;
 
             $pool = Pool::create();
 
             $pool->add(function () use ($message, $callback, $consumeQueue) {
-                $result = (bool) call_user_func($callback, $message);
+                try 
+                {
+                    $result = (bool) call_user_func($callback, $message);
+                }
+                catch (\Exception $e) {
+                    Log::stack(self::LOG_CHANNELS)
+                    ->error(
+                        "Could not process message function : "
+                        . $e->getMessage()
+                    );
+                }
+                
                 if( $result ) {
                     $this->amqpMessageService->takeMessage($message);
                 } else {
+                    Log::stack(self::LOG_CHANNELS)->error("Sending message to failureExchange");
                     $this->amqpMessageService->requeueNewMessage($message, $consumeQueue);
                 }
             });
