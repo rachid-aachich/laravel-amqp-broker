@@ -17,7 +17,8 @@ use MaroEco\MessageBroker\Contracts\AMQPMessageServiceInterface;
  */
 class MessageBrokerService implements MessageBrokerInterface
 {
-    protected const LOG_CHANNELS = ['rabbitmq', 'single', 'stderr'];
+    protected const LOG_CHANNELS = ['rabbitmq', 'single', 'stdout'];
+    protected const ERR_CHANNELS = ['rabbitmq', 'stderr'];
 
     /**
      * Create a new MessageBrokerService instance.
@@ -45,17 +46,18 @@ class MessageBrokerService implements MessageBrokerInterface
     public function consumeMessage($consumeQueue, $failureExchange, callable $callback)
     {
         $handler = function($message) use($callback, $failureExchange, $consumeQueue) {
-            if( !$this->amqpMessageService->validateMessage($message, $failureExchange) ) return;
+            if( !$this->amqpMessageService->validateMessage($message, $failureExchange) ) {
+                return;
+            }
 
             $pool = Pool::create();
 
             $pool->add(function () use ($message, $callback, $consumeQueue) {
-                try 
-                {
+                try {
                     $result = (bool) call_user_func($callback, $message);
                 }
                 catch (\Exception $e) {
-                    Log::stack(self::LOG_CHANNELS)
+                    Log::stack(self::ERR_CHANNELS)
                     ->error(
                         "Could not process message function : "
                         . $e->getMessage()
@@ -102,7 +104,12 @@ class MessageBrokerService implements MessageBrokerInterface
      * @param array $headers
      * @param string $routingKey
      */
-    public function publishToExchange($messageContent, string $exchangeName , array $headers = [], string $routingKey = "")
+    public function publishToExchange(
+        $messageContent,
+        string $exchangeName,
+        array $headers = [],
+        string $routingKey = ""
+    )
     {
         $pool = Pool::create();
 

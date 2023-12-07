@@ -4,7 +4,7 @@
     "require": {
         "php": "^7.4|^8.0|^10.0",
         "nesbot/carbon": "^2.53",
-        "illuminate/support": "^9.0",
+        "illuminate/support": "^10.10",
         "php-amqplib/php-amqplib": "^3.5",
         "spatie/async": "^1.5"
     },
