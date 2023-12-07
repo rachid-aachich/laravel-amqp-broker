@@ -98,16 +98,18 @@ class RabbitMQRepository implements BrokerRepoInterface
                     "connect To RMQStream Connection Closed from consumeMessageFromQueue function : "
                     . $e->getMessage()
                 );
+                throw $e;
             // To enhanced later: report error
         } catch (\Exception $e) {
             Log::stack(self::LOG_CHANNELS)
                 ->error(
-                    "The Consuming is not completed from consumeMessageFromQueue function"
+                    "Cannot consume from the queue: " . $consumeQueue . ". Will exit the process."
                     . "\n Exception: "
                     . $e->getMessage()
                     . "\n Stacktrace: "
                     . $e->getTraceAsString()
                 );
+            throw $e;
         }
     }
 
