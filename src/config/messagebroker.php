@@ -7,7 +7,7 @@ return [
     'defaultDevice'                 => "Xilog",
     'default'                       => "rabbitmq",
     'rabbitmq'                      => [
-        'maxRMQDeliveryLimit'           => env("RABBITMQ_maxRMQDeliveryLimit", 30),
+        'maxRMQDeliveryLimit'           => env("RABBITMQ_MAX_RETRIES", 30),
         'maxRMQConnectionRetries'       => 3,
         'maxRMQConnectionRetryDelay'    => 3000,
         'queue_consumer'                => env('RABBITMQ_QUEUE_CONSUMER'),
