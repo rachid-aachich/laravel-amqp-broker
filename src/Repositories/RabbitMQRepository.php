@@ -89,6 +89,8 @@ class RabbitMQRepository implements BrokerRepoInterface
 
             self::$channel->basic_consume($consumeQueue, '', false, false, false, false, $callback);
 
+            register_shutdown_function('closeConnection', self::$channel, self::$connection);
+
             while (count(self::$channel->callbacks)) {
                 self::$channel->wait();
             }
