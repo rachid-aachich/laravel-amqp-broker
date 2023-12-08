@@ -78,23 +78,13 @@ class RabbitMQRepository implements BrokerRepoInterface
     {
         try {
             Log::stack(self::LOG_CHANNELS)->info('consumption started!');
-            if (self::$connection == null || !self::$connection->isConnected()) {
-                throw new AMQPConnectionClosedException('Failed to establish connection to RabbitMQ server.');
-            }
-
-            // Check if the channel is still open, if not, recreate it
-            if (self::$channel == null || !self::$channel->is_open()) {
-                self::$channel = self::$connection->channel();
-            }
 
             self::$channel->basic_consume($consumeQueue, '', false, false, false, false, $callback);
 
             register_shutdown_function('closeConnection', self::$channel, self::$connection);
 
             // Loop as long as the channel has callbacks registered
-            while (self::$channel->is_consuming()) {
-                self::$channel->wait(null, true);
-            }
+            self::$channel->consume();
 
         } catch (AMQPConnectionClosedException $e) {
             Log::stack(self::LOG_CHANNELS)
