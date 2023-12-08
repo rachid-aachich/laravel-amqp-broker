@@ -91,9 +91,10 @@ class RabbitMQRepository implements BrokerRepoInterface
 
             register_shutdown_function('closeConnection', self::$channel, self::$connection);
 
-            while (count(self::$channel->callbacks)) {
-                self::$channel->wait();
-            }
+            #while (count(self::$channel->callbacks)) {
+            #    self::$channel->wait();
+            #}
+            self::$channel->consume();
 
         } catch (AMQPConnectionClosedException $e) {
             Log::stack(self::LOG_CHANNELS)
