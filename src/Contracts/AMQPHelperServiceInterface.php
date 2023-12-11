@@ -14,6 +14,8 @@ interface AMQPHelperServiceInterface
 
     public function getHeadersFromAMQPMessage(AMQPMessage $message) : array;
 
+    public function getDeliveryAttempts(AMQPMessage $message) : int;
+
     public function hasExceededDeliveryLimit(AMQPMessage $message);
 
     public function isMessageRejectable($message): bool;

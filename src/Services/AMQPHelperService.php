@@ -8,7 +8,7 @@ use PhpAmqpLib\Wire\AMQPTable;
 
 class AMQPHelperService implements AMQPHelperServiceInterface
 {
-
+    
     /**
      * Increments the delivery attempts for a given message.
      *
@@ -58,6 +58,11 @@ class AMQPHelperService implements AMQPHelperServiceInterface
     public function getHeadersFromAMQPMessage(AMQPMessage $message) : array
     {
         return $message->get('application_headers')->getNativeData();
+    }
+
+    public function getDeliveryAttempts(AMQPMessage $message) : int
+    {
+        return $this->getHeadersFromAMQPMessage($message)['x-delivery-attempts'] ?? 0;
     }
 
     /**

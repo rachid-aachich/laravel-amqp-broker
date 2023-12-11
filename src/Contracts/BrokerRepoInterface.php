@@ -15,4 +15,5 @@ interface BrokerRepoInterface
     public function publishBulkMessagesToExchange(Collection $messages, string $exchange);
     public function status();
     public function acknowledgeMessage(AMQPMessage $message);
+    public function rejectMessage(AMQPMessage $message);
 }

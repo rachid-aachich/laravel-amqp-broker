@@ -36,16 +36,15 @@ class MessageBrokerService implements MessageBrokerInterface
     /**
      * Consume a message from the specified queue and handle it using the provided callback.
      * The callback should return false if not succeeded or throw an exception.
-     * If the callback doesn't succeed the message is requeued X times and finally sent to failureExchange
+     * If the callback doesn't succeed the message is requeued X times and finally nack'ed
      *
      * @param string $consumeQueue
-     * @param string $failureExchange
      * @param callable $callback
      */
-    public function consumeMessage($consumeQueue, $failureExchange, callable $callback)
+    public function consumeMessage($consumeQueue, callable $callback)
     {
-        $handler = function($message) use($callback, $failureExchange, $consumeQueue) {
-            if( !$this->amqpMessageService->validateMessage($message, $failureExchange) ) return;
+        $handler = function($message) use($callback, $consumeQueue) {
+            if( !$this->amqpMessageService->validateMessage($message) ) return;
 
             $pool = Pool::create();
 
@@ -65,7 +64,6 @@ class MessageBrokerService implements MessageBrokerInterface
                 if( $result ) {
                     $this->amqpMessageService->takeMessage($message);
                 } else {
-                    Log::stack(self::LOG_CHANNELS)->error("Sending message to failureExchange");
                     $this->amqpMessageService->requeueNewMessage($message, $consumeQueue);
                 }
             });

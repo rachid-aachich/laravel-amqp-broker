@@ -7,7 +7,7 @@ use PhpAmqpLib\Message\AMQPMessage;
 
 interface AMQPMessageServiceInterface
 {
-    public function validateMessage(AMQPMessage $message, string $failureExchange, array $headers = []): bool;
+    public function validateMessage(AMQPMessage $message, array $headers = []): bool;
 
     public function takeMessage(AMQPMessage $message);
 
