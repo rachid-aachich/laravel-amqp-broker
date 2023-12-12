@@ -43,8 +43,6 @@ class AMQPMessageService implements AMQPMessageServiceInterface
             unset($headers['x-delivery-attempts']);
         }
 
-        $amqpMessage = $this->amqpHelperService->createPersistenceAMQPMessage($message->getBody(), $headers);
-
         $this->rejectMessage($message);
 
         return false;

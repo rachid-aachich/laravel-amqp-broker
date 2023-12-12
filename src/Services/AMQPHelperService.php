@@ -8,7 +8,7 @@ use PhpAmqpLib\Wire\AMQPTable;
 
 class AMQPHelperService implements AMQPHelperServiceInterface
 {
-    
+
     /**
      * Increments the delivery attempts for a given message.
      *
@@ -73,7 +73,13 @@ class AMQPHelperService implements AMQPHelperServiceInterface
      */
     public function hasExceededDeliveryLimit(AMQPMessage $message)
     {
-        $deliveryAttempts = $this->getHeadersFromAMQPMessage($message)['x-delivery-attempts'] ?? 0;
+        $headers = $this->getHeadersFromAMQPMessage($message);
+        $deliveryAttempts = $headers['x-delivery-attempts'] ?? 0;
+        $redelivered = $message->get('redelivered');
+
+        if ($redelivered && array_key_exists('x-delivery-attempts', $headers)) {
+            unset($headers['x-delivery-attempts']);
+        }
 
         return $deliveryAttempts > config('messagebroker.rabbitmq.maxRMQDeliveryLimit');
     }
