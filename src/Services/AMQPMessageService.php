@@ -3,7 +3,6 @@
 namespace MaroEco\MessageBroker\Services;
 
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
 use MaroEco\MessageBroker\Contracts\AMQPHelperServiceInterface;
 use MaroEco\MessageBroker\Contracts\AMQPMessageServiceInterface;
 use MaroEco\MessageBroker\Contracts\BrokerRepoInterface;
@@ -37,12 +36,6 @@ class AMQPMessageService implements AMQPMessageServiceInterface
     {
         if (!$this->amqpHelperService->isMessageRejectable($message)) return true; // this message is valid
 
-        // this message should be rejected
-        $headers = $this->amqpHelperService->getHeadersFromAMQPMessage($message);
-        if (array_key_exists('x-delivery-attempts', $headers)) {
-            unset($headers['x-delivery-attempts']);
-        }
-
         $this->rejectMessage($message);
 
         return false;
@@ -63,35 +56,9 @@ class AMQPMessageService implements AMQPMessageServiceInterface
      *
      * @param AMQPMessage $message
      */
-    public function rejectMessage($message)
+    public function rejectMessage(AMQPMessage $message)
     {
         $this->messageBrokerRepository->rejectMessage($message);
-    }
-
-    /**
-     * Requeues a new message and removes the old one or nack the message
-     *
-     * @param AMQPMessage $msg
-     * @param string $queue
-     * @return void
-     */
-    public function requeueNewMessage(AMQPMessage $message, string $queue)
-    {
-        if( $this->validateMessage($message) ) 
-        {
-            Log::stack(self::LOG_CHANNELS)->error("Requeuing message for retry, attempt: " . $this->amqpHelperService->getDeliveryAttempts($message));
-
-            $newMessage = $this->amqpHelperService->getNewMessageIncrementHeaders($message);
-    
-            $this->publishMessageToQueue($newMessage, $queue);
-    
-            // Aknowledge the message re-delivery and thereafter removing its old instance from the queue
-            $this->takeMessage($message);
-        } else 
-        {
-            Log::stack(self::LOG_CHANNELS)->error("Rejecting message");
-            $this->rejectMessage($message);
-        }
     }
 
     /**

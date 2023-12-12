@@ -11,7 +11,7 @@ interface AMQPMessageServiceInterface
 
     public function takeMessage(AMQPMessage $message);
 
-    public function requeueNewMessage(AMQPMessage $message, string $queue);
+    public function rejectMessage(AMQPMessage $message);
 
     public function connect();
 

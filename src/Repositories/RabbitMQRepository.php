@@ -319,7 +319,7 @@ class RabbitMQRepository implements BrokerRepoInterface
         self::$channel->basic_ack($message->delivery_info['delivery_tag']);
     }
 
-        /**
+    /**
      * Rejects a message. Nack. Goes to DLX.
      *
      * @param AMQPMessage $message

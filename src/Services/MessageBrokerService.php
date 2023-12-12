@@ -43,13 +43,13 @@ class MessageBrokerService implements MessageBrokerInterface
      */
     public function consumeMessage($consumeQueue, callable $callback)
     {
-        $handler = function($message) use($callback, $consumeQueue) {
+        $handler = function($message) use($callback) {
             if( !$this->amqpMessageService->validateMessage($message) ) return;
 
             $pool = Pool::create();
 
-            $pool->add(function () use ($message, $callback, $consumeQueue) {
-                try 
+            $pool->add(function () use ($message, $callback) {
+                try
                 {
                     $result = (bool) call_user_func($callback, $message);
                 }
@@ -60,11 +60,11 @@ class MessageBrokerService implements MessageBrokerInterface
                         . $e->getMessage()
                     );
                 }
-                
+
                 if( $result ) {
                     $this->amqpMessageService->takeMessage($message);
                 } else {
-                    $this->amqpMessageService->requeueNewMessage($message, $consumeQueue);
+                    $this->amqpMessageService->rejectMessage($message);
                 }
             });
 
