@@ -33,25 +33,6 @@ class AMQPHelperService implements AMQPHelperServiceInterface
         return $message->get('application_headers')->getNativeData();
     }
 
-    /**
-     * Checks if the delivery limit has been exceeded for a given message.
-     *
-     * @param AMQPMessage $message
-     * @return bool
-     */
-    public function hasExceededDeliveryLimit(AMQPMessage $message)
-    {
-        $headers = $this->getHeadersFromAMQPMessage($message);
-        $deliveryAttempts = $headers['x-delivery-attempts'] ?? 0;
-        $redelivered = $message->get('redelivered');
-
-        if ($redelivered && array_key_exists('x-delivery-attempts', $headers)) {
-            unset($headers['x-delivery-attempts']);
-        }
-
-        return $deliveryAttempts > config('messagebroker.rabbitmq.maxRMQDeliveryLimit');
-    }
-
     public function isMessageRejectable($message): bool
     {
         return empty($message) || !$message;
