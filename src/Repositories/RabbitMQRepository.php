@@ -9,6 +9,7 @@ use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Exception\AMQPConnectionClosedException;
 use PhpAmqpLib\Exception\AMQPRuntimeException;
 use PhpAmqpLib\Message\AMQPMessage;
+use Psr\Log\LoggerInterface;
 
 use function config;
 
@@ -24,13 +25,17 @@ class RabbitMQRepository implements BrokerRepoInterface
     protected const LOG_CHANNELS = ['rabbitmq', 'single', 'stdout'];
     protected const ERR_CHANNELS = ['rabbitmq', 'stderr'];
 
+    protected LoggerInterface $logger;
+
     private const CONNECTION_ERR_STR = 'Failed to establish connection to RabbitMQ server.';
 
-    public function __construct()
+    public function __construct(LoggerInterface $logger)
     {
         $this->maxRetries   = config('messagebroker.rabbitmq.maxRMQConnectionRetries');
         $this->retryDelay   = config('messagebroker.rabbitmq.maxRMQConnectionRetryDelay'); // Delay in milliseconds
         $this->maxDeliveryLimit = config('messagebroker.rabbitmq.maxRMQDeliveryLimit');
+
+        $this->logger = $logger;
     }
 
     /**
@@ -40,7 +45,7 @@ class RabbitMQRepository implements BrokerRepoInterface
      */
     public function connect()
     {
-        Log::stack(self::LOG_CHANNELS)->info('start connect!');
+        $this->logger->info('start connect!');
         try {
             retry($this->maxRetries, function () {
                 self::$connection = new AMQPStreamConnection(
@@ -52,12 +57,12 @@ class RabbitMQRepository implements BrokerRepoInterface
                 );
                 self::$channel = self::$connection->channel();
 
-                Log::stack(self::LOG_CHANNELS)->info("Succeeded in establishing connection with RabbitMQ server.");
+                $this->logger->info("Succeeded in establishing connection with RabbitMQ server.");
             }, $this->retryDelay);
         } catch (AMQPConnectionClosedException | AMQPRuntimeException | \Exception $e) {
             // Close the connection and channel if they are set
 
-            Log::stack(self::ERR_CHANNELS)->error("connect To RMQStream \n -class : " .
+            $this->logger->error("connect To RMQStream \n -class : " .
                 get_class($e) .
                 "\n -Exception : " .
                 $e->getMessage());
@@ -79,7 +84,7 @@ class RabbitMQRepository implements BrokerRepoInterface
     public function consumeMessageFromQueue(string $consumeQueue, callable $callback): void
     {
         try {
-            Log::stack(self::LOG_CHANNELS)->info("consumption started! from queue: {$consumeQueue}");
+            $this->logger->info("consumption started! from queue: {$consumeQueue}");
             if (self::$connection == null || !self::$connection->isConnected()) {
                 throw new AMQPConnectionClosedException(self::CONNECTION_ERR_STR);
             }
@@ -96,14 +101,14 @@ class RabbitMQRepository implements BrokerRepoInterface
             }
 
         } catch (AMQPConnectionClosedException $e) {
-            Log::stack(self::ERR_CHANNELS)
+            $this->logger
                 ->error(
                     "connect To RMQStream Connection Closed from consumeMessageFromQueue function : "
                     . $e->getMessage()
                 );
             // To enhanced later: report error
         } catch (\Exception $e) {
-            Log::stack(self::ERR_CHANNELS)
+            $this->logger
                 ->error(
                     "The Consuming is not completed from consumeMessageFromQueue function"
                     . "\n Exception: "
@@ -134,7 +139,7 @@ class RabbitMQRepository implements BrokerRepoInterface
             self::$channel->basic_publish($message, '', $publishQueue);
 
         } catch (AMQPConnectionClosedException $e) {
-            Log::stack(self::ERR_CHANNELS)->error(
+            $this->logger->error(
                 "connect To RMQStream Connection Closed "
                 . "from publishToQueue function."
                 . "\n Exception: "
@@ -145,7 +150,7 @@ class RabbitMQRepository implements BrokerRepoInterface
             // send email to the Admin Manager
             //
         } catch (\Exception $e) {
-            Log::stack(self::ERR_CHANNELS)->warning(
+            $this->logger->warning(
                 "The Publish is not completed \n"
                 . "from publishToQueue function: \n"
                 . "\n Exception: "
@@ -185,7 +190,7 @@ class RabbitMQRepository implements BrokerRepoInterface
             self::$channel->wait_for_pending_acks_returns();
 
         } catch (AMQPConnectionClosedException $e) {
-            Log::stack(self::ERR_CHANNELS)->error(
+            $this->logger->error(
                 "connect To RMQStream Connection Closed "
                 . "from publishToQueue function."
                 . "\n Exception: "
@@ -196,7 +201,7 @@ class RabbitMQRepository implements BrokerRepoInterface
             // send email to the Admin Manager
             //
         } catch (\Exception $e) {
-            Log::stack(self::ERR_CHANNELS)->warning(
+            $this->logger->warning(
                 "The Publish is not completed \n"
                 . "from publishToQueue function: \n"
                 . "\n Exception: "
@@ -236,7 +241,7 @@ class RabbitMQRepository implements BrokerRepoInterface
             self::$channel->wait_for_pending_acks_returns();
 
         } catch (AMQPConnectionClosedException $e) {
-            Log::stack(self::ERR_CHANNELS)->error(
+            $this->logger->error(
                 "connect To RMQStream Connection Closed "
                 . "from publishToQueue function."
                 . "\n Exception: "
@@ -247,7 +252,7 @@ class RabbitMQRepository implements BrokerRepoInterface
             // send email to the Admin Manager
             //
         } catch (\Exception $e) {
-            Log::stack(self::ERR_CHANNELS)->warning(
+            $this->logger->warning(
                 "The Publish is not completed \n"
                 . "from publishToQueue function: \n"
                 . "\n Exception: "
@@ -281,7 +286,7 @@ class RabbitMQRepository implements BrokerRepoInterface
             self::$channel->basic_publish($message, $exchange, $routingKey);
 
         } catch (AMQPConnectionClosedException $e) {
-            Log::stack(self::ERR_CHANNELS)->error(
+            $this->logger->error(
                 "connect To RMQStream Connection Closed "
                 . "from publishToQueue function."
                 . "\n Exception: "
@@ -292,7 +297,7 @@ class RabbitMQRepository implements BrokerRepoInterface
             // send email to the Admin Manager
             //
         } catch (\Exception $e) {
-            Log::stack(self::ERR_CHANNELS)->warning(
+            $this->logger->warning(
                 "The exchange Publish is not completed \n"
                 . "from publishToQueue function: \n"
                 . "\n Exception: "

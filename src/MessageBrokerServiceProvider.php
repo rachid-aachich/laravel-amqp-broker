@@ -3,9 +3,11 @@
 namespace MaroEco\MessageBroker;
 
 use Illuminate\Support\ServiceProvider;
+
 use MaroEco\MessageBroker\Contracts\AMQPHelperServiceInterface;
 use MaroEco\MessageBroker\Contracts\AMQPMessageServiceInterface;
 use MaroEco\MessageBroker\Contracts\BrokerRepoInterface;
+
 use MaroEco\MessageBroker\Services\MessageBrokerService;
 use MaroEco\MessageBroker\Repositories\RabbitMQRepository;
 use MaroEco\MessageBroker\Services\AMQPHelperService;
