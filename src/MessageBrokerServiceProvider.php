@@ -7,11 +7,14 @@ use Illuminate\Support\ServiceProvider;
 use MaroEco\MessageBroker\Contracts\AMQPHelperServiceInterface;
 use MaroEco\MessageBroker\Contracts\AMQPMessageServiceInterface;
 use MaroEco\MessageBroker\Contracts\BrokerRepoInterface;
+use MaroEco\MessageBroker\Contracts\MessageBrokerInterface;
 
 use MaroEco\MessageBroker\Services\MessageBrokerService;
 use MaroEco\MessageBroker\Repositories\RabbitMQRepository;
 use MaroEco\MessageBroker\Services\AMQPHelperService;
 use MaroEco\MessageBroker\Services\AMQPMessageService;
+
+use Psr\Log\LoggerInterface;
 
 class MessageBrokerServiceProvider extends ServiceProvider
 {
@@ -24,7 +27,8 @@ class MessageBrokerServiceProvider extends ServiceProvider
         );
 
         $this->app->singleton(BrokerRepoInterface::class, function ($app) {
-            return new RabbitMQRepository;
+            $logger = $app->make(LoggerInterface::class);
+            return new RabbitMQRepository($logger);
         });
 
         $this->app->singleton(MessageBrokerInterface::class, MessageBrokerService::class);
