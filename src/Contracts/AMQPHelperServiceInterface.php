@@ -6,15 +6,9 @@ use PhpAmqpLib\Message\AMQPMessage;
 
 interface AMQPHelperServiceInterface
 {
-    public function incrementDeliveryAttempts($message);
-
-    public function getNewMessageIncrementHeaders($message);
-
     public function createAMQPTableFromArray($headers = null);
 
     public function getHeadersFromAMQPMessage(AMQPMessage $message) : array;
-
-    public function hasExceededDeliveryLimit(AMQPMessage $message);
 
     public function isMessageRejectable($message): bool;
 

@@ -29,25 +29,14 @@ class AMQPMessageService implements AMQPMessageServiceInterface
      * Validate a message and determine if it should be rejected.
      *
      * @param AMQPMessage $message
-     * @param string $failureExchange
      * @param array $headers
      * @return bool True if the message is valid, false if it should be rejected.
      */
-    public function validateMessage(AMQPMessage $message, string $failureExchange, array $headers = []): bool
+    public function validateMessage(AMQPMessage $message, array $headers = []): bool
     {
         if (!$this->amqpHelperService->isMessageRejectable($message)) return true; // this message is valid
 
-        // this message should be rejected
-        $headers = $this->amqpHelperService->getHeadersFromAMQPMessage($message);
-        if (array_key_exists('x-delivery-attempts', $headers)) {
-            unset($headers['x-delivery-attempts']);
-        }
-
-        $amqpMessage = $this->amqpHelperService->createPersistenceAMQPMessage($message->getBody(), $headers);
-
-        $this->publishMessageToExchange($amqpMessage, $failureExchange, $headers);
-
-        $this->takeMessage($message);
+        $this->rejectMessage($message);
 
         return false;
     }
@@ -63,20 +52,13 @@ class AMQPMessageService implements AMQPMessageServiceInterface
     }
 
     /**
-     * Requeues a new message and removes the old one.
+     * Reject message and send to configured DLX
      *
-     * @param AMQPMessage $msg
-     * @param string $queue
-     * @return void
+     * @param AMQPMessage $message
      */
-    public function requeueNewMessage(AMQPMessage $message, string $queue)
+    public function rejectMessage(AMQPMessage $message)
     {
-        $newMessage = $this->amqpHelperService->getNewMessageIncrementHeaders($message);
-
-        $this->publishMessageToQueue($newMessage, $queue);
-
-        // Aknowledge the message re-delivery and thereafter removing its old instance from the queue
-        $this->takeMessage($message);
+        $this->messageBrokerRepository->rejectMessage($message);
     }
 
     /**

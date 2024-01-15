@@ -40,24 +40,21 @@ class MessageBrokerService implements MessageBrokerInterface
     /**
      * Consume a message from the specified queue and handle it using the provided callback.
      * The callback should return false if not succeeded or throw an exception.
-     * If the callback doesn't succeed the message is requeued X times and finally sent to failureExchange
+     * If the callback doesn't succeed the message is requeued X times and finally nack'ed
      *
      * @param string $consumeQueue
-     * @param string $failureExchange
      * @param callable $callback
      */
-    public function consumeMessage($consumeQueue, $failureExchange, callable $callback)
+    public function consumeMessage($consumeQueue, callable $callback)
     {
-        $this->logger->info("Consumption started");
-        $handler = function($message) use($callback, $failureExchange, $consumeQueue) {
-            if( !$this->amqpMessageService->validateMessage($message, $failureExchange) ) {
-                return;
-            }
+        $handler = function($message) use($callback) {
+            if( !$this->amqpMessageService->validateMessage($message) ) return;
 
             $pool = Pool::create();
 
-            $pool->add(function () use ($message, $callback, $consumeQueue) {
-                try {
+            $pool->add(function () use ($message, $callback) {
+                try
+                {
                     $result = (bool) call_user_func($callback, $message);
                 }
                 catch (\Exception $e) {
@@ -66,13 +63,11 @@ class MessageBrokerService implements MessageBrokerInterface
                         . $e->getMessage()
                     );
                 }
-                
+
                 if( $result ) {
                     $this->amqpMessageService->takeMessage($message);
                 } else {
-                    $this->logger->error("Sending message to failureExchange");
-                    
-                    $this->amqpMessageService->requeueNewMessage($message, $consumeQueue);
+                    $this->amqpMessageService->rejectMessage($message);
                 }
             });
 

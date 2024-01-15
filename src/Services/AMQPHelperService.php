@@ -9,33 +9,6 @@ use PhpAmqpLib\Wire\AMQPTable;
 class AMQPHelperService implements AMQPHelperServiceInterface
 {
 
-    /**
-     * Increments the delivery attempts for a given message.
-     *
-     * @param AMQPMessage $message
-     * @return array
-     */
-    public function incrementDeliveryAttempts($message)
-    {
-        $headers = $this->getHeadersFromAMQPMessage($message);
-        $headers['x-delivery-attempts'] = (int) (
-            $headers['x-delivery-attempts'] ?? 0
-            ) + 1;
-        return $headers;
-    }
-
-    /**
-     * Generates a new message with incremented headers.
-     *
-     * @param AMQPMessage $message
-     * @return AMQPMessage
-     */
-    public function getNewMessageIncrementHeaders($message)
-    {
-        $headers = $this->incrementDeliveryAttempts($message);
-
-        return $this->createPersistenceAMQPMessage($message->getBody(), $headers);
-    }
 
     /**
      * Converts an array of headers into an AMQPTable.
@@ -60,22 +33,9 @@ class AMQPHelperService implements AMQPHelperServiceInterface
         return $message->get('application_headers')->getNativeData();
     }
 
-    /**
-     * Checks if the delivery limit has been exceeded for a given message.
-     *
-     * @param AMQPMessage $message
-     * @return bool
-     */
-    public function hasExceededDeliveryLimit(AMQPMessage $message)
-    {
-        $deliveryAttempts = $this->getHeadersFromAMQPMessage($message)['x-delivery-attempts'] ?? 0;
-
-        return $deliveryAttempts > config('messagebroker.rabbitmq.maxRMQDeliveryLimit');
-    }
-
     public function isMessageRejectable($message): bool
     {
-        return empty($message) || !$message || $this->hasExceededDeliveryLimit($message);
+        return empty($message) || !$message;
     }
 
     /**

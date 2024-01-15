@@ -7,6 +7,7 @@ use MaroEco\MessageBroker\Contracts\BrokerRepoInterface;
 use Illuminate\Support\Facades\Log;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Exception\AMQPConnectionClosedException;
+use PhpAmqpLib\Exception\AMQPInvalidArgumentException;
 use PhpAmqpLib\Exception\AMQPRuntimeException;
 use PhpAmqpLib\Message\AMQPMessage;
 use Psr\Log\LoggerInterface;
@@ -84,21 +85,14 @@ class RabbitMQRepository implements BrokerRepoInterface
     public function consumeMessageFromQueue(string $consumeQueue, callable $callback): void
     {
         try {
-            $this->logger->info("consumption started! from queue: {$consumeQueue}");
-            if (self::$connection == null || !self::$connection->isConnected()) {
-                throw new AMQPConnectionClosedException(self::CONNECTION_ERR_STR);
-            }
-
-            // Check if the channel is still open, if not, recreate it
-            if (self::$channel == null || !self::$channel->is_open()) {
-                self::$channel = self::$connection->channel();
-            }
+            Log::stack(self::LOG_CHANNELS)->info('consumption started!');
 
             self::$channel->basic_consume($consumeQueue, '', false, false, false, false, $callback);
 
-            while (count(self::$channel->callbacks)) {
-                self::$channel->wait();
-            }
+            register_shutdown_function(array($this,'closeConnection'));
+
+            // Loop as long as the channel has callbacks registered
+            self::$channel->consume();
 
         } catch (AMQPConnectionClosedException $e) {
             $this->logger
@@ -110,13 +104,25 @@ class RabbitMQRepository implements BrokerRepoInterface
         } catch (\Exception $e) {
             $this->logger
                 ->error(
-                    "The Consuming is not completed from consumeMessageFromQueue function"
+                    "Cannot consume from the queue: " . $consumeQueue . ". Will exit the process."
                     . "\n Exception: "
                     . $e->getMessage()
                     . "\n Stacktrace: "
                     . $e->getTraceAsString()
                 );
-        }
+                self::$channel->basic_nack(0, 1); // Reject one or more incoming messages effectively sending them to dlx
+                $this->consumeMessageFromQueue($consumeQueue, $callback); // rerun the consume-process
+        } catch (\Exception $e) {
+            Log::stack(self::LOG_CHANNELS)
+                ->error(
+                    "Unrecoverable error occurred"
+                    . "\n Exception: "
+                    . $e->getMessage()
+                    . "\n Stacktrace: "
+                    . $e->getTraceAsString()
+                );
+                throw $e;
+            }
     }
 
     /**
@@ -319,6 +325,17 @@ class RabbitMQRepository implements BrokerRepoInterface
     public function acknowledgeMessage(AMQPMessage $message)
     {
         self::$channel->basic_ack($message->delivery_info['delivery_tag']);
+    }
+
+    /**
+     * Rejects a message. Nack. Goes to DLX.
+     *
+     * @param AMQPMessage $message
+     * @return void
+     */
+    public function rejectMessage(AMQPMessage $message)
+    {
+        $message->nack();
     }
 
     /**
