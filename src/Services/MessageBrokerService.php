@@ -2,6 +2,7 @@
 
 namespace MaroEco\MessageBroker\Services;
 
+use Fiber;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use MaroEco\MessageBroker\Contracts\MessageBrokerInterface;
@@ -50,9 +51,7 @@ class MessageBrokerService implements MessageBrokerInterface
         $handler = function($message) use($callback) {
             if( !$this->amqpMessageService->validateMessage($message) ) return;
 
-            $pool = Pool::create();
-
-            $pool->add(function () use ($message, $callback) {
+            $fiber = new Fiber(function () use ($message, $callback) {
                 try
                 {
                     $result = (bool) call_user_func($callback, $message);
@@ -71,7 +70,13 @@ class MessageBrokerService implements MessageBrokerInterface
                 }
             });
 
-            $pool->wait();
+            $fiber->start();
+
+            // Wait for the Fiber to finish
+            while ($fiber->isStarted() && !$fiber->isTerminated()) {
+                $fiber->resume();
+            }
+
         };
 
         $this->amqpMessageService->consumeMessageFromQueue($consumeQueue, $handler);
@@ -86,13 +91,17 @@ class MessageBrokerService implements MessageBrokerInterface
      */
     public function publishToQueue($messageContent, string $queue , array $headers = [])
     {
-        $pool = Pool::create();
-
-        $pool->add(function () use ($messageContent, $queue, $headers) {
-            $this->amqpMessageService->publishMessageToQueue($messageContent, $queue , $headers);
+        $fiber = new Fiber(function () use ($messageContent, $queue, $headers) {
+            $this->amqpMessageService->publishMessageToQueue($messageContent, $queue, $headers);
         });
 
-        $pool->wait();
+        // Start the Fiber
+        $fiber->start();
+
+        // Wait for the Fiber to finish
+        while ($fiber->isStarted() && !$fiber->isTerminated()) {
+            $fiber->resume();
+        }
     }
 
     /**
@@ -110,13 +119,16 @@ class MessageBrokerService implements MessageBrokerInterface
         string $routingKey = ""
     )
     {
-        $pool = Pool::create();
-
-        $pool->add(function () use ($messageContent, $exchangeName, $headers, $routingKey) {
+        $fiber = new Fiber(function () use ($messageContent, $exchangeName, $headers, $routingKey) {
             $this->amqpMessageService->publishMessageToExchange($messageContent, $exchangeName, $headers, $routingKey);
         });
 
-        $pool->wait();
+        $fiber->start();
+
+        // Wait for the Fiber to finish
+        while ($fiber->isStarted() && !$fiber->isTerminated()) {
+            $fiber->resume();
+        }
 
     }
 
@@ -129,13 +141,16 @@ class MessageBrokerService implements MessageBrokerInterface
      */
     public function publishBulkMessagesToExchange(Collection $messages, string $exchange, array $headers = [])
     {
-        $pool = Pool::create();
-
-        $pool->add(function () use ($messages, $exchange, $headers) {
+        $fiber = new Fiber(function () use ($messages, $exchange, $headers) {
             $this->amqpMessageService->publishBulkMessagesToExchange($messages, $exchange, $headers);
         });
 
-        $pool->wait();
+        $fiber->start();
+
+        // Wait for the Fiber to finish
+        while ($fiber->isStarted() && !$fiber->isTerminated()) {
+            $fiber->resume();
+        }
 
     }
 
@@ -148,14 +163,16 @@ class MessageBrokerService implements MessageBrokerInterface
      */
     public function publishBulkMessagesToQueue(Collection $messages, string $queue, array $headers = [])
     {
-        $pool = Pool::create();
-
-        $pool->add(function () use ($messages, $queue, $headers) {
+        $fiber = new Fiber(function () use ($messages, $queue, $headers) {
             $this->amqpMessageService->publishBulkMessagesToQueue($messages, $queue, $headers);
         });
 
-        $pool->wait();
+        $fiber->start();
 
+        // Wait for the Fiber to finish
+        while ($fiber->isStarted() && !$fiber->isTerminated()) {
+            $fiber->resume();
+        }
     }
 
     /**
