@@ -6,9 +6,7 @@ use Fiber;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use MaroEco\MessageBroker\Contracts\MessageBrokerInterface;
-use Spatie\Async\Pool;
 use MaroEco\MessageBroker\Contracts\AMQPMessageServiceInterface;
-use Psr\Log\LoggerInterface;
 
 /**
  * A service class implementing the MessageBrokerInterface.
@@ -19,15 +17,11 @@ use Psr\Log\LoggerInterface;
  */
 class MessageBrokerService implements MessageBrokerInterface
 {
-
-    protected LoggerInterface $logger;
-
     /**
      * Create a new MessageBrokerService instance.
      *
      */
-    public function __construct(private AMQPMessageServiceInterface $amqpMessageService, LoggerInterface $logger) {
-        $this->logger = $logger;
+    public function __construct(private AMQPMessageServiceInterface $amqpMessageService) {
     }
 
     /**
@@ -57,7 +51,7 @@ class MessageBrokerService implements MessageBrokerInterface
                     $result = (bool) call_user_func($callback, $message);
                 }
                 catch (\Exception $e) {
-                    $this->logger->error(
+                    Log::stack(['stdout'])->error(
                         "Could not process message function : "
                         . $e->getMessage()
                     );

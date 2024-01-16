@@ -14,8 +14,6 @@ use MaroEco\MessageBroker\Repositories\RabbitMQRepository;
 use MaroEco\MessageBroker\Services\AMQPHelperService;
 use MaroEco\MessageBroker\Services\AMQPMessageService;
 
-use Psr\Log\LoggerInterface;
-
 class MessageBrokerServiceProvider extends ServiceProvider
 {
     protected const CONFIG_PATH = '/config/messagebroker.php';
@@ -26,11 +24,7 @@ class MessageBrokerServiceProvider extends ServiceProvider
             __DIR__ . self::CONFIG_PATH, 'messagebroker'
         );
 
-        $this->app->singleton(BrokerRepoInterface::class, function ($app) {
-            $logger = $app->make(LoggerInterface::class);
-            return new RabbitMQRepository($logger);
-        });
-
+        $this->app->singleton(BrokerRepoInterface::class, RabbitMQRepository::class);
         $this->app->singleton(MessageBrokerInterface::class, MessageBrokerService::class);
         $this->app->singleton(AMQPMessageServiceInterface::class, AMQPMessageService::class);
         $this->app->singleton(AMQPHelperServiceInterface::class, AMQPHelperService::class);
