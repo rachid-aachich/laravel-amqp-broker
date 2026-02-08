@@ -1,0 +1,89 @@
+# llms.txt - AI/LLM Documentation for Laravel AMQP Message Broker
+
+> Laravel package for AMQP message broker abstraction with RabbitMQ support
+
+## Package Overview
+
+This is a Laravel package (`aachich/message-broker`) that provides an abstraction layer for AMQP message brokers. It allows Laravel applications to easily switch between RabbitMQ and other AMQP-compatible brokers without code changes.
+
+## Quick Start
+
+```bash
+composer require aachich/message-broker
+```
+
+```php
+use Aachich\MessageBroker\Facades\MessageBroker;
+
+MessageBroker::connect();
+MessageBroker::publishToQueue($message, 'queue-name');
+```
+
+## Architecture
+
+```
+MessageBroker Facade
+    └── MessageBrokerInterface (public API)
+        └── MessageBrokerService (Fiber-based async orchestration)
+            └── AMQPMessageService (message creation/validation)
+                └── AMQPHelperService (AMQP utilities)
+                    └── RabbitMQRepository (low-level AMQP operations)
+```
+
+## Key Files
+
+- `src/Facades/MessageBroker.php` - Laravel Facade for static access
+- `src/Contracts/MessageBrokerInterface.php` - Main public API interface
+- `src/Services/MessageBrokerService.php` - Core service with Fiber async
+- `src/Repositories/RabbitMQRepository.php` - RabbitMQ implementation
+- `src/config/messagebroker.php` - Configuration file
+- `src/MessageBrokerServiceProvider.php` - Laravel service provider
+
+## Main Methods
+
+| Method | Description |
+|--------|-------------|
+| `connect()` | Establish broker connection |
+| `publishToQueue($msg, $queue, $headers)` | Publish single message to queue |
+| `publishToExchange($msg, $exchange, $headers, $routingKey)` | Publish to exchange |
+| `publishBulkMessagesToQueue($messages, $queue)` | Bulk publish Collection |
+| `consumeMessage($queue, $callback)` | Consume with callback |
+| `getStatus()` | Get connection status |
+
+## Requirements
+
+- PHP 8.1+ (Fiber support required)
+- Laravel 10.x or 11.x
+- php-amqplib/php-amqplib ^3.5
+
+## Environment Variables
+
+```
+RABBITMQ_HOST, RABBITMQ_PORT, RABBITMQ_USER, RABBITMQ_PASSWORD
+RABBITMQ_VHOST, RABBITMQ_QUEUE_CONSUMER, RABBITMQ_QUEUE_PUBLISHER
+```
+
+## Extending
+
+Implement `BrokerRepoInterface` to add new broker support:
+
+```php
+use Aachich\MessageBroker\Contracts\BrokerRepoInterface;
+
+class MyBrokerRepository implements BrokerRepoInterface
+{
+    // Implement: connect(), publishMessageToQueue(), consumeMessageFromQueue(), etc.
+}
+```
+
+## Testing
+
+```bash
+vendor/bin/phpunit
+```
+
+44 tests, 63 assertions covering all core functionality.
+
+## License
+
+MIT
