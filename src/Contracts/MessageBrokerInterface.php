@@ -1,6 +1,6 @@
 <?php
 
-namespace MaroEco\MessageBroker\Contracts;
+namespace Aachich\MessageBroker\Contracts;
 
 use Illuminate\Support\Collection;
 use PhpAmqpLib\Message\AMQPMessage;

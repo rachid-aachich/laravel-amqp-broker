@@ -1,9 +1,9 @@
 <?php
 
-namespace MaroEco\MessageBroker\Repositories;
+namespace Aachich\MessageBroker\Repositories;
 
 use Illuminate\Support\Collection;
-use MaroEco\MessageBroker\Contracts\BrokerRepoInterface;
+use Aachich\MessageBroker\Contracts\BrokerRepoInterface;
 use Illuminate\Support\Facades\Log;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Exception\AMQPConnectionClosedException;
@@ -106,17 +106,7 @@ class RabbitMQRepository implements BrokerRepoInterface
                 );
                 self::$channel->basic_nack(0, 1); // Reject one or more incoming messages effectively sending them to dlx
                 $this->consumeMessageFromQueue($consumeQueue, $callback); // rerun the consume-process
-        } catch (\Exception $e) {
-            Log::stack(['stdout'])
-                ->error(
-                    "Unrecoverable error occurred"
-                    . "\n Exception: "
-                    . $e->getMessage()
-                    . "\n Stacktrace: "
-                    . $e->getTraceAsString()
-                );
-                throw $e;
-            }
+        }
     }
 
     /**

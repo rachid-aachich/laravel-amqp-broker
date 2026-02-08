@@ -1,18 +1,18 @@
 <?php
 
-namespace MaroEco\MessageBroker;
+namespace Aachich\MessageBroker;
 
 use Illuminate\Support\ServiceProvider;
 
-use MaroEco\MessageBroker\Contracts\AMQPHelperServiceInterface;
-use MaroEco\MessageBroker\Contracts\AMQPMessageServiceInterface;
-use MaroEco\MessageBroker\Contracts\BrokerRepoInterface;
-use MaroEco\MessageBroker\Contracts\MessageBrokerInterface;
+use Aachich\MessageBroker\Contracts\AMQPHelperServiceInterface;
+use Aachich\MessageBroker\Contracts\AMQPMessageServiceInterface;
+use Aachich\MessageBroker\Contracts\BrokerRepoInterface;
+use Aachich\MessageBroker\Contracts\MessageBrokerInterface;
 
-use MaroEco\MessageBroker\Services\MessageBrokerService;
-use MaroEco\MessageBroker\Repositories\RabbitMQRepository;
-use MaroEco\MessageBroker\Services\AMQPHelperService;
-use MaroEco\MessageBroker\Services\AMQPMessageService;
+use Aachich\MessageBroker\Services\MessageBrokerService;
+use Aachich\MessageBroker\Repositories\RabbitMQRepository;
+use Aachich\MessageBroker\Services\AMQPHelperService;
+use Aachich\MessageBroker\Services\AMQPMessageService;
 
 class MessageBrokerServiceProvider extends ServiceProvider
 {

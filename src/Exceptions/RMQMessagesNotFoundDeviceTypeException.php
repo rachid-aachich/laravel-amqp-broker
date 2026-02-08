@@ -1,6 +1,6 @@
 <?php
 
-namespace MaroEco\MessageBroker\Exceptions;
+namespace Aachich\MessageBroker\Exceptions;
 
 use Exception;
 use Illuminate\Support\Facades\Log;

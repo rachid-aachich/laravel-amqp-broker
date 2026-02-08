@@ -1,31 +1,54 @@
 {
-    "name": "maroeco/message-broker",
-    "description": "Message Broker Library for MaroEco Laravel",
+    "name": "aachich/message-broker",
+    "description": "AMQP Message Broker abstraction for Laravel - easily switch between RabbitMQ and other AMQP-compatible brokers",
+    "keywords": ["laravel", "rabbitmq", "amqp", "message-broker", "queue", "messaging", "php"],
+    "license": "MIT",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Aachich",
+            "email": "info@aachich.com"
+        }
+    ],
+    "homepage": "https://github.com/rachid-aachich/laravel-amqp-broker",
+    "support": {
+        "issues": "https://github.com/rachid-aachich/laravel-amqp-broker/issues",
+        "source": "https://github.com/rachid-aachich/laravel-amqp-broker"
+    },
     "require": {
-        "php": "^7.4|^8.0|^10.0",
-        "nesbot/carbon": "^2.53",
-        "illuminate/support": "^10.10",
+        "php": "^8.1",
+        "nesbot/carbon": "^2.53|^3.0",
+        "illuminate/support": "^10.0|^11.0",
         "php-amqplib/php-amqplib": "^3.5"
     },
     "require-dev": {
-        "phpunit/phpunit": "^9.0",
+        "phpunit/phpunit": "^9.0|^10.0",
         "mockery/mockery": "^1.6"
     },
     "autoload": {
         "psr-4": {
-            "MaroEco\\MessageBroker\\": "src/"
+            "Aachich\\MessageBroker\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "MaroEco\\MessageBroker\\Tests\\": "tests/"
+            "Aachich\\MessageBroker\\Tests\\": "tests/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "MaroEco\\MessageBroker\\MessageBrokerServiceProvider"
-            ]
+                "Aachich\\MessageBroker\\MessageBrokerServiceProvider"
+            ],
+            "aliases": {
+                "MessageBroker": "Aachich\\MessageBroker\\Facades\\MessageBroker"
+            }
         }
-    }
+    },
+    "config": {
+        "sort-packages": true,
+        "optimize-autoloader": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
 }

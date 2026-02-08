@@ -1,33 +1,25 @@
 <?php
 
-// tests/Unit/MessageBrokerServiceTest.php
+namespace Aachich\MessageBroker\Tests\Unit;
 
-namespace Tests\Unit;
-
+use Illuminate\Support\Collection;
 use PHPUnit\Framework\TestCase;
-use MaroEco\MessageBroker\Services\MessageBrokerService;
-use MaroEco\MessageBroker\Contracts\BrokerRepoInterface;
-use MaroEco\MessageBroker\Contracts\MessageBrokerInterface;
-use MaroEco\MessageBroker\Contracts\AMQPMessageServiceInterface;
-use MaroEco\MessageBroker\Services\AMQPMessageService;
-use MaroEco\MessageBroker\Contracts\AMQPHelperServiceInterface;
-
+use Aachich\MessageBroker\Services\MessageBrokerService;
+use Aachich\MessageBroker\Contracts\AMQPMessageServiceInterface;
 use Mockery;
 
 class MessageBrokerServiceTest extends TestCase
 {
-
     private $amqpMessageServiceMock;
     private $messageBrokerService;
 
     protected function setUp(): void
     {
-        // Mocking
         $this->amqpMessageServiceMock = $this->createMock(AMQPMessageServiceInterface::class);
         $this->messageBrokerService = new MessageBrokerService($this->amqpMessageServiceMock);
     }
 
-    public function testConnect_ShouldSucceed()
+    public function testConnect_ShouldSucceed(): void
     {
         $this->amqpMessageServiceMock->expects($this->once())
             ->method('connect');
@@ -35,11 +27,11 @@ class MessageBrokerServiceTest extends TestCase
         $this->messageBrokerService->connect();
     }
 
-    public function testConsumeMessage_ShouldSucceed()
+    public function testConsumeMessage_ShouldSucceed(): void
     {
         $consumeQueue = 'testQueue';
         $callback = function ($msg) {
-            return true; // Simulate processing the message successfully
+            return true;
         };
 
         $this->amqpMessageServiceMock->expects($this->once())
@@ -52,10 +44,9 @@ class MessageBrokerServiceTest extends TestCase
             );
 
         $this->messageBrokerService->consumeMessage($consumeQueue, $callback);
-        // No need for assertions here because we assert using expects() method, we expect the method's behaviour
     }
 
-    public function testPublishToQueue_ShouldSucceed()
+    public function testPublishToQueue_ShouldSucceed(): void
     {
         $messageContent = 'testMessage';
         $queue = 'testQueue';
@@ -72,14 +63,94 @@ class MessageBrokerServiceTest extends TestCase
         $this->messageBrokerService->publishToQueue($messageContent, $queue, $headers);
     }
 
-    /**
-     * Clean up the testing environment before the next test.
-     *
-     * @return void
-     */
-    public function tearDown(): void
+    public function testPublishToQueue_WithoutHeaders_ShouldSucceed(): void
     {
-        // Ensure Mockery expectations have been met
+        $messageContent = ['data' => 'test'];
+        $queue = 'testQueue';
+
+        $this->amqpMessageServiceMock->expects($this->once())
+            ->method('publishMessageToQueue')
+            ->with(
+                $this->equalTo($messageContent),
+                $this->equalTo($queue),
+                $this->equalTo([])
+            );
+
+        $this->messageBrokerService->publishToQueue($messageContent, $queue);
+    }
+
+    public function testPublishToExchange_ShouldSucceed(): void
+    {
+        $messageContent = 'testMessage';
+        $exchangeName = 'testExchange';
+        $headers = ['key' => 'value'];
+        $routingKey = 'test.routing.key';
+
+        $this->amqpMessageServiceMock->expects($this->once())
+            ->method('publishMessageToExchange')
+            ->with(
+                $this->equalTo($messageContent),
+                $this->equalTo($exchangeName),
+                $this->equalTo($headers),
+                $this->equalTo($routingKey)
+            );
+
+        $this->messageBrokerService->publishToExchange($messageContent, $exchangeName, $headers, $routingKey);
+    }
+
+    public function testPublishBulkMessagesToQueue_ShouldSucceed(): void
+    {
+        $messages = new Collection(['msg1', 'msg2', 'msg3']);
+        $queue = 'testQueue';
+        $headers = ['batch' => true];
+
+        $this->amqpMessageServiceMock->expects($this->once())
+            ->method('publishBulkMessagesToQueue')
+            ->with(
+                $this->equalTo($messages),
+                $this->equalTo($queue),
+                $this->equalTo($headers)
+            );
+
+        $this->messageBrokerService->publishBulkMessagesToQueue($messages, $queue, $headers);
+    }
+
+    public function testPublishBulkMessagesToExchange_ShouldSucceed(): void
+    {
+        $messages = new Collection(['msg1', 'msg2']);
+        $exchange = 'testExchange';
+        $headers = [];
+
+        $this->amqpMessageServiceMock->expects($this->once())
+            ->method('publishBulkMessagesToExchange')
+            ->with(
+                $this->equalTo($messages),
+                $this->equalTo($exchange),
+                $this->equalTo($headers)
+            );
+
+        $this->messageBrokerService->publishBulkMessagesToExchange($messages, $exchange, $headers);
+    }
+
+    public function testGetStatus_ShouldReturnStatus(): void
+    {
+        $expectedStatus = [
+            'brokerName' => 'RabbitMQ',
+            'connect' => true,
+            'consuming' => false
+        ];
+
+        $this->amqpMessageServiceMock->expects($this->once())
+            ->method('getStatus')
+            ->willReturn($expectedStatus);
+
+        $result = $this->messageBrokerService->getStatus();
+
+        $this->assertEquals($expectedStatus, $result);
+    }
+
+    protected function tearDown(): void
+    {
         Mockery::close();
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace MaroEco\MessageBroker\Contracts;
+namespace Aachich\MessageBroker\Contracts;
 
 use Illuminate\Support\Collection;
 use PhpAmqpLib\Message\AMQPMessage;
@@ -23,7 +23,7 @@ interface AMQPMessageServiceInterface
 
     public function publishBulkMessagesToExchange(Collection $messages, string $exchange, array $headers = []);
 
-    public function publishMessageToExchange($message, string $exchangeName, array $headers = []);
+    public function publishMessageToExchange($message, string $exchangeName, array $headers = [], string $routingKey = "");
 
     public function getStatus();
 }

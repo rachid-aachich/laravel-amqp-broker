@@ -1,11 +1,9 @@
 <?php
 
-
 return [
 
     'schemaVersion'                 => 1,
-    'defaultDevice'                 => "Xilog",
-    'default'                       => "rabbitmq",
+    'default'                       => env('MESSAGE_BROKER_DRIVER', 'rabbitmq'),
     'rabbitmq'                      => [
         'maxRMQDeliveryLimit'           => env("RABBITMQ_MAX_RETRIES", 30),
         'maxRMQConnectionRetries'       => 3,

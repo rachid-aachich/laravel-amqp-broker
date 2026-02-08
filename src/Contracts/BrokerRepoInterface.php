@@ -1,6 +1,6 @@
 <?php
 
-namespace MaroEco\MessageBroker\Contracts;
+namespace Aachich\MessageBroker\Contracts;
 
 use Illuminate\Support\Collection;
 use PhpAmqpLib\Message\AMQPMessage;
@@ -8,6 +8,7 @@ use PhpAmqpLib\Message\AMQPMessage;
 interface BrokerRepoInterface
 {
     public function connect();
+    public function closeConnection();
     public function consumeMessageFromQueue(string $consumeQueue, callable $callback): void;
     public function publishMessageToQueue(AMQPMessage $message, string $publishQueue);
     public function publishMessageToExchange(AMQPMessage $message, string $exchange, string $routingKey = "");

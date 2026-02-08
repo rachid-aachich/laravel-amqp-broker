@@ -1,8 +1,8 @@
 <?php
 
-namespace MaroEco\MessageBroker\Services;
+namespace Aachich\MessageBroker\Services;
 
-use MaroEco\MessageBroker\Contracts\AMQPHelperServiceInterface;
+use Aachich\MessageBroker\Contracts\AMQPHelperServiceInterface;
 use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Wire\AMQPTable;
 

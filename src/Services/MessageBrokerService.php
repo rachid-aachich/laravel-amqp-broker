@@ -1,12 +1,12 @@
 <?php
 
-namespace MaroEco\MessageBroker\Services;
+namespace Aachich\MessageBroker\Services;
 
 use Fiber;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
-use MaroEco\MessageBroker\Contracts\MessageBrokerInterface;
-use MaroEco\MessageBroker\Contracts\AMQPMessageServiceInterface;
+use Aachich\MessageBroker\Contracts\MessageBrokerInterface;
+use Aachich\MessageBroker\Contracts\AMQPMessageServiceInterface;
 
 /**
  * A service class implementing the MessageBrokerInterface.

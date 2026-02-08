@@ -1,11 +1,11 @@
 <?php
 
-namespace MaroEco\MessageBroker\Services;
+namespace Aachich\MessageBroker\Services;
 
 use Illuminate\Support\Collection;
-use MaroEco\MessageBroker\Contracts\AMQPHelperServiceInterface;
-use MaroEco\MessageBroker\Contracts\AMQPMessageServiceInterface;
-use MaroEco\MessageBroker\Contracts\BrokerRepoInterface;
+use Aachich\MessageBroker\Contracts\AMQPHelperServiceInterface;
+use Aachich\MessageBroker\Contracts\AMQPMessageServiceInterface;
+use Aachich\MessageBroker\Contracts\BrokerRepoInterface;
 use PhpAmqpLib\Message\AMQPMessage;
 
 class AMQPMessageService implements AMQPMessageServiceInterface
